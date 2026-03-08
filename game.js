@@ -13,7 +13,6 @@ class SnakeFlow {
     this.startButton = document.getElementById("start-button");
     this.restartButton = document.getElementById("restart-button");
     this.touchButtons = document.querySelectorAll("[data-direction]");
-    this.themeButtons = document.querySelectorAll("[data-theme-option]");
 
     this.grid = { cols: 24, rows: 15 };
     this.baseStepDuration = 150;
@@ -26,71 +25,16 @@ class SnakeFlow {
     this.lastFrameTime = 0;
     this.lastDirectionInputAt = 0;
     this.lastMoveSoundAt = 0;
-    this.particles = [];
     this.screenShake = 0;
-    this.themeName = localStorage.getItem("snake-flow-theme") || "dawn";
+    this.swallowPulse = 0;
     this.audioContext = null;
     this.masterGain = null;
-
-    this.themes = {
-      dawn: {
-        status: "晨雾",
-        frameTop: "rgba(255, 255, 255, 0.5)",
-        frameBottom: "rgba(218, 224, 230, 0.22)",
-        boardStart: "rgba(252, 250, 246, 0.98)",
-        boardEnd: "rgba(230, 234, 239, 0.74)",
-        boardGlow: "rgba(255, 255, 255, 0.22)",
-        gridLine: "rgba(104, 112, 122, 0.075)",
-        borderGlow: "rgba(255, 255, 255, 0.32)",
-        ambientGlow: "rgba(255, 255, 255, 0.24)",
-        foodCore: "#fff4d8",
-        foodMid: "#ff9f7e",
-        foodEdge: "#f36f53",
-        foodShadow: "rgba(188, 92, 71, 0.28)",
-        foodGlow: "rgba(255, 131, 103, 0.82)",
-        particleColor: "255, 131, 103"
-      },
-      night: {
-        status: "暗夜",
-        frameTop: "rgba(74, 82, 95, 0.22)",
-        frameBottom: "rgba(10, 13, 18, 0.58)",
-        boardStart: "rgba(24, 28, 34, 0.98)",
-        boardEnd: "rgba(14, 17, 21, 0.98)",
-        boardGlow: "rgba(255, 255, 255, 0.03)",
-        gridLine: "rgba(221, 228, 238, 0.065)",
-        borderGlow: "rgba(255, 255, 255, 0.08)",
-        ambientGlow: "rgba(168, 182, 204, 0.12)",
-        foodCore: "#fff8c1",
-        foodMid: "#ffd361",
-        foodEdge: "#ffb11e",
-        foodShadow: "rgba(255, 177, 30, 0.24)",
-        foodGlow: "rgba(255, 200, 92, 0.78)",
-        particleColor: "255, 196, 86"
-      },
-      cyber: {
-        status: "赛博",
-        frameTop: "rgba(0, 255, 231, 0.12)",
-        frameBottom: "rgba(10, 12, 20, 0.62)",
-        boardStart: "rgba(25, 28, 35, 0.98)",
-        boardEnd: "rgba(16, 19, 27, 0.98)",
-        boardGlow: "rgba(0, 255, 231, 0.08)",
-        gridLine: "rgba(122, 255, 243, 0.1)",
-        borderGlow: "rgba(0, 255, 231, 0.2)",
-        ambientGlow: "rgba(0, 255, 231, 0.14)",
-        foodCore: "#f9ffd2",
-        foodMid: "#f8ff58",
-        foodEdge: "#d0ff21",
-        foodShadow: "rgba(155, 255, 0, 0.28)",
-        foodGlow: "rgba(236, 255, 87, 0.88)",
-        particleColor: "236, 255, 87"
-      }
-    };
+    this.groundTexture = null;
 
     this.bestScore = Number(localStorage.getItem("snake-flow-best") || 0);
 
     this.reset();
     this.bindEvents();
-    this.applyTheme(this.themeName);
     this.resizeCanvas();
     this.bestScoreElement.textContent = String(this.bestScore);
     requestAnimationFrame((timestamp) => this.animate(timestamp));
@@ -116,10 +60,10 @@ class SnakeFlow {
     this.currentStepDuration = this.baseStepDuration;
     this.lastDirectionInputAt = 0;
     this.lastMoveSoundAt = 0;
-    this.particles = [];
     this.screenShake = 0;
+    this.swallowPulse = 0;
     this.scoreElement.textContent = "0";
-    this.statusElement.textContent = "Ready";
+    this.statusElement.textContent = "Idle";
     this.finalScoreElement.textContent = "0";
   }
 
@@ -149,13 +93,6 @@ class SnakeFlow {
         },
         { passive: false }
       );
-    });
-
-    this.themeButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        this.ensureAudioReady();
-        this.applyTheme(button.dataset.themeOption);
-      });
     });
   }
 
@@ -280,27 +217,13 @@ class SnakeFlow {
     });
   }
 
-  applyTheme(themeName) {
-    if (!this.themes[themeName]) {
-      return;
-    }
-
-    this.themeName = themeName;
-    document.body.dataset.theme = themeName;
-    localStorage.setItem("snake-flow-theme", themeName);
-
-    this.themeButtons.forEach((button) => {
-      button.classList.toggle("is-active", button.dataset.themeOption === themeName);
-    });
-  }
-
   start() {
     this.reset();
     this.running = true;
     this.lastStepTime = performance.now();
     this.startOverlay.classList.remove("overlay-visible");
     this.gameOverOverlay.classList.remove("overlay-visible");
-    this.statusElement.textContent = this.themes[this.themeName].status;
+    this.statusElement.textContent = "Tracking";
   }
 
   restart() {
@@ -321,12 +244,6 @@ class SnakeFlow {
       KeyD: "right"
     };
 
-    const themeMap = {
-      Digit1: "dawn",
-      Digit2: "night",
-      Digit3: "cyber"
-    };
-
     if (event.code === "Space" && this.gameOver) {
       event.preventDefault();
       this.restart();
@@ -336,11 +253,6 @@ class SnakeFlow {
     if (event.code === "Enter" && !this.running && !this.gameOver) {
       event.preventDefault();
       this.start();
-      return;
-    }
-
-    if (themeMap[event.code]) {
-      this.applyTheme(themeMap[event.code]);
       return;
     }
 
@@ -389,13 +301,15 @@ class SnakeFlow {
 
   randomFood() {
     let food;
+    let attempts = 0;
 
     do {
       food = {
         x: Math.floor(Math.random() * this.grid.cols),
         y: Math.floor(Math.random() * this.grid.rows)
       };
-    } while (this.snake?.some((segment) => segment.x === food.x && segment.y === food.y));
+      attempts += 1;
+    } while (this.snake?.some((segment) => segment.x === food.x && segment.y === food.y) && attempts < 500);
 
     return food;
   }
@@ -418,6 +332,99 @@ class SnakeFlow {
     this.cellSize = Math.max(12, Math.floor(boardWidth / this.grid.cols));
     this.boardOffset.x = Math.round((width - this.cellSize * this.grid.cols) / 2);
     this.boardOffset.y = Math.round((height - this.cellSize * this.grid.rows) / 2);
+    this.buildGroundTexture();
+  }
+
+  buildGroundTexture() {
+    const width = this.grid.cols * this.cellSize;
+    const height = this.grid.rows * this.cellSize;
+    const textureCanvas = document.createElement("canvas");
+    textureCanvas.width = width;
+    textureCanvas.height = height;
+    const texture = textureCanvas.getContext("2d");
+
+    const base = texture.createLinearGradient(0, 0, 0, height);
+    base.addColorStop(0, "#31451f");
+    base.addColorStop(0.5, "#27391a");
+    base.addColorStop(1, "#1c2814");
+    texture.fillStyle = base;
+    texture.fillRect(0, 0, width, height);
+
+    for (let i = 0; i < 2400; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const radius = 12 + Math.random() * 42;
+      const patch = texture.createRadialGradient(x, y, radius * 0.12, x, y, radius);
+      patch.addColorStop(0, `rgba(98, 126, 62, ${0.05 + Math.random() * 0.08})`);
+      patch.addColorStop(1, "rgba(98, 126, 62, 0)");
+      texture.fillStyle = patch;
+      texture.beginPath();
+      texture.arc(x, y, radius, 0, Math.PI * 2);
+      texture.fill();
+    }
+
+    for (let i = 0; i < 240; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const rx = 18 + Math.random() * 48;
+      const ry = 10 + Math.random() * 22;
+      const mud = texture.createRadialGradient(x, y, rx * 0.1, x, y, rx);
+      mud.addColorStop(0, `rgba(74, 54, 32, ${0.12 + Math.random() * 0.08})`);
+      mud.addColorStop(1, "rgba(74, 54, 32, 0)");
+      texture.fillStyle = mud;
+      texture.beginPath();
+      texture.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+      texture.fill();
+    }
+
+    for (let i = 0; i < 34; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const rx = 24 + Math.random() * 62;
+      const ry = 10 + Math.random() * 26;
+      const puddle = texture.createRadialGradient(x, y, rx * 0.1, x, y, rx);
+      puddle.addColorStop(0, "rgba(92, 103, 78, 0.2)");
+      puddle.addColorStop(0.55, "rgba(53, 62, 52, 0.14)");
+      puddle.addColorStop(1, "rgba(53, 62, 52, 0)");
+      texture.fillStyle = puddle;
+      texture.beginPath();
+      texture.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+      texture.fill();
+
+      texture.fillStyle = "rgba(214, 219, 189, 0.06)";
+      texture.beginPath();
+      texture.ellipse(x - rx * 0.2, y - ry * 0.12, rx * 0.32, ry * 0.12, 0, 0, Math.PI * 2);
+      texture.fill();
+    }
+
+    const bladeCount = Math.max(11000, Math.floor((width * height) / 58));
+    for (let i = 0; i < bladeCount; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const length = 8 + Math.random() * 30;
+      const bend = (Math.random() - 0.5) * 20;
+      const hue = 90 + Math.random() * 26;
+      const sat = 24 + Math.random() * 34;
+      const light = 16 + Math.random() * 20;
+      texture.strokeStyle = `hsla(${hue}, ${sat}%, ${light}%, ${0.16 + Math.random() * 0.42})`;
+      texture.lineWidth = 0.45 + Math.random() * 1.45;
+      texture.beginPath();
+      texture.moveTo(x, y + length * 0.44);
+      texture.quadraticCurveTo(x + bend * 0.25, y + length * 0.12, x + bend, y - length);
+      texture.stroke();
+    }
+
+    for (let i = 0; i < 1800; i += 1) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const radius = 0.4 + Math.random() * 1.2;
+      texture.fillStyle = `rgba(224, 230, 204, ${0.02 + Math.random() * 0.06})`;
+      texture.beginPath();
+      texture.arc(x, y, radius, 0, Math.PI * 2);
+      texture.fill();
+    }
+
+    this.groundTexture = textureCanvas;
   }
 
   animate(timestamp) {
@@ -461,19 +468,11 @@ class SnakeFlow {
   }
 
   updateEffects(delta) {
-    this.screenShake = Math.max(0, this.screenShake - delta * 0.014);
-
-    this.particles = this.particles.filter((particle) => {
-      particle.velocityY += particle.gravity * delta;
-      particle.x += particle.velocityX * delta;
-      particle.y += particle.velocityY * delta;
-      particle.rotation += particle.spin * delta;
-      particle.life -= delta;
-      return particle.life > 0;
-    });
+    this.screenShake = Math.max(0, this.screenShake - delta * 0.012);
+    this.swallowPulse = Math.max(0, this.swallowPulse - delta * 0.0044);
   }
 
-  step(timestamp) {
+  step(timestamp = performance.now()) {
     this.previousSnake = this.snake.map((segment) => ({ ...segment }));
 
     if (this.pendingDirection) {
@@ -512,13 +511,12 @@ class SnakeFlow {
     }
 
     if (willGrow) {
-      const burstSource = { ...this.food };
       this.score += 10;
       this.scoreElement.textContent = String(this.score);
       this.finalScoreElement.textContent = String(this.score);
       this.playEatSound();
-      this.spawnFoodBurst(burstSource);
-      this.screenShake = Math.max(this.screenShake, this.cellSize * 0.08);
+      this.swallowPulse = 1;
+      this.screenShake = Math.max(this.screenShake, this.cellSize * 0.018);
       this.food = this.randomFood();
       this.currentStepDuration = Math.max(
         this.minStepDuration,
@@ -529,34 +527,10 @@ class SnakeFlow {
     }
   }
 
-  spawnFoodBurst(foodPoint) {
-    const palette = this.themes[this.themeName];
-    const center = this.cellCenter(foodPoint);
-    const count = 34;
-
-    for (let index = 0; index < count; index += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = (0.06 + Math.random() * 0.17) * this.cellSize;
-      this.particles.push({
-        x: center.x,
-        y: center.y,
-        velocityX: Math.cos(angle) * speed,
-        velocityY: Math.sin(angle) * speed - this.cellSize * 0.02,
-        gravity: 0.00042 * this.cellSize,
-        life: 360 + Math.random() * 280,
-        maxLife: 640,
-        size: 1.2 + Math.random() * (this.cellSize * 0.09),
-        rotation: Math.random() * Math.PI * 2,
-        spin: (Math.random() - 0.5) * 0.02,
-        color: palette.particleColor
-      });
-    }
-  }
-
   finish() {
     this.running = false;
     this.gameOver = true;
-    this.statusElement.textContent = "Crashed";
+    this.statusElement.textContent = "Lost Trail";
     this.finalScoreElement.textContent = String(this.score);
     this.playGameOverSound();
     this.gameOverOverlay.classList.add("overlay-visible");
@@ -577,300 +551,318 @@ class SnakeFlow {
     this.ctx.clearRect(0, 0, width, height);
     this.ctx.save();
     this.ctx.translate(shakeX, shakeY);
-    this.drawBackground(width, height);
-    this.drawBoard();
-    this.drawFood(progress, timestamp);
-    this.drawParticles();
-    this.drawSnake(progress);
-    this.drawAmbientHighlights(width, height);
+    this.drawGround(width, height, timestamp);
+    this.drawFrogFood(timestamp);
+    this.drawSnake(progress, timestamp);
+    this.drawAtmosphere(width, height, timestamp);
     this.ctx.restore();
   }
 
-  drawBackground(width, height) {
-    const palette = this.themes[this.themeName];
-    const background = this.ctx.createLinearGradient(0, 0, width, height);
-    background.addColorStop(0, palette.frameTop);
-    background.addColorStop(1, palette.frameBottom);
-    this.ctx.fillStyle = background;
+  drawGround(width, height, timestamp) {
+    const borderShadow = this.ctx.createLinearGradient(0, 0, 0, height);
+    borderShadow.addColorStop(0, "rgba(17, 18, 12, 0.48)");
+    borderShadow.addColorStop(1, "rgba(3, 4, 2, 0.82)");
+    this.ctx.fillStyle = borderShadow;
     this.ctx.fillRect(0, 0, width, height);
 
     this.ctx.save();
     this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
 
-    const boardGradient = this.ctx.createLinearGradient(
-      0,
-      0,
-      this.grid.cols * this.cellSize,
-      this.grid.rows * this.cellSize
-    );
-    boardGradient.addColorStop(0, palette.boardStart);
-    boardGradient.addColorStop(1, palette.boardEnd);
+    const boardWidth = this.grid.cols * this.cellSize;
+    const boardHeight = this.grid.rows * this.cellSize;
 
-    this.roundRect(
-      this.ctx,
-      0,
-      0,
-      this.grid.cols * this.cellSize,
-      this.grid.rows * this.cellSize,
-      this.cellSize * 0.9
-    );
-    this.ctx.fillStyle = boardGradient;
-    this.ctx.fill();
+    this.roundRect(this.ctx, 0, 0, boardWidth, boardHeight, this.cellSize * 0.88);
+    this.ctx.clip();
 
-    this.ctx.strokeStyle = palette.borderGlow;
-    this.ctx.lineWidth = this.themeName === "cyber" ? 1.2 : 1;
-    this.ctx.stroke();
+    if (!this.groundTexture) {
+      this.buildGroundTexture();
+    }
 
-    if (this.themeName === "cyber") {
-      this.ctx.shadowBlur = 16;
-      this.ctx.shadowColor = palette.borderGlow;
-      this.ctx.strokeStyle = "rgba(124, 255, 243, 0.14)";
+    this.ctx.drawImage(this.groundTexture, 0, 0, boardWidth, boardHeight);
+
+    const wetLight = this.ctx.createLinearGradient(0, 0, boardWidth, boardHeight);
+    wetLight.addColorStop(0, "rgba(255, 239, 170, 0.12)");
+    wetLight.addColorStop(0.3, "rgba(255, 255, 255, 0.02)");
+    wetLight.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+    this.ctx.fillStyle = wetLight;
+    this.ctx.fillRect(0, 0, boardWidth, boardHeight);
+
+    for (let i = 0; i < 5; i += 1) {
+      const bandY = (Math.sin(timestamp / 1100 + i * 0.7) * 0.5 + 0.5) * boardHeight;
+      const sheen = this.ctx.createLinearGradient(0, bandY - this.cellSize * 1.6, 0, bandY + this.cellSize * 1.6);
+      sheen.addColorStop(0, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.5, "rgba(214, 224, 191, 0.035)");
+      sheen.addColorStop(1, "rgba(255,255,255,0)");
+      this.ctx.fillStyle = sheen;
+      this.ctx.fillRect(0, bandY - this.cellSize * 1.6, boardWidth, this.cellSize * 3.2);
+    }
+
+    for (let i = 0; i < 160; i += 1) {
+      const x = (i * 71) % boardWidth;
+      const y = (i * 47) % boardHeight;
+      const sway = Math.sin(timestamp / 380 + i * 0.55) * this.cellSize * 0.08;
+      this.ctx.strokeStyle = `rgba(190, 213, 144, ${0.045 + (i % 4) * 0.01})`;
+      this.ctx.lineWidth = 0.9;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      this.ctx.quadraticCurveTo(x + sway * 0.4, y - this.cellSize * 0.18, x + sway, y - this.cellSize * 0.56);
       this.ctx.stroke();
     }
+
+    const edgeDark = this.ctx.createRadialGradient(boardWidth * 0.5, boardHeight * 0.45, boardWidth * 0.18, boardWidth * 0.5, boardHeight * 0.5, boardWidth * 0.78);
+    edgeDark.addColorStop(0, "rgba(0, 0, 0, 0)");
+    edgeDark.addColorStop(1, "rgba(0, 0, 0, 0.22)");
+    this.ctx.fillStyle = edgeDark;
+    this.ctx.fillRect(0, 0, boardWidth, boardHeight);
 
     this.ctx.restore();
   }
 
-  drawBoard() {
-    const palette = this.themes[this.themeName];
-
-    this.ctx.save();
-    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
-
-    const width = this.grid.cols * this.cellSize;
-    const height = this.grid.rows * this.cellSize;
-
-    this.ctx.strokeStyle = palette.gridLine;
-    this.ctx.lineWidth = 0.6;
-
-    for (let col = 1; col < this.grid.cols; col += 1) {
-      const x = col * this.cellSize;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, height);
-      this.ctx.stroke();
-    }
-
-    for (let row = 1; row < this.grid.rows; row += 1) {
-      const y = row * this.cellSize;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(width, y);
-      this.ctx.stroke();
-    }
-
-    if (this.themeName === "cyber") {
-      this.ctx.strokeStyle = "rgba(113, 255, 242, 0.06)";
-      this.ctx.lineWidth = 1;
-      this.roundRect(
-        this.ctx,
-        this.cellSize * 0.2,
-        this.cellSize * 0.2,
-        width - this.cellSize * 0.4,
-        height - this.cellSize * 0.4,
-        this.cellSize * 0.72
-      );
-      this.ctx.stroke();
-    }
-
-    this.ctx.restore();
-  }
-
-  drawFood(progress, timestamp) {
-    const palette = this.themes[this.themeName];
-    const pulse = 0.9 + Math.sin(timestamp / 220) * 0.08;
+  drawFrogFood(timestamp) {
     const center = this.cellCenter(this.food);
-    const radius = this.cellSize * 0.26 * pulse;
+    const breath = 1 + Math.sin(timestamp / 300) * 0.02;
+    const bodyScale = this.cellSize * 0.38 * breath;
 
     this.ctx.save();
     this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
 
-    const glow = this.ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, this.cellSize * 1.12);
-    glow.addColorStop(0, palette.foodGlow);
-    glow.addColorStop(0.55, this.withAlpha(palette.particleColor, 0.34));
-    glow.addColorStop(1, this.withAlpha(palette.particleColor, 0));
-
-    this.ctx.fillStyle = glow;
+    this.ctx.fillStyle = "rgba(10, 12, 8, 0.24)";
     this.ctx.beginPath();
-    this.ctx.arc(center.x, center.y, this.cellSize * 0.92, 0, Math.PI * 2);
+    this.ctx.ellipse(center.x + this.cellSize * 0.08, center.y + this.cellSize * 0.3, bodyScale * 1.15, bodyScale * 0.5, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    this.ctx.fillStyle = palette.foodShadow;
+    const bellyShadow = this.ctx.createRadialGradient(center.x, center.y + bodyScale * 0.15, bodyScale * 0.08, center.x, center.y, bodyScale * 1.2);
+    bellyShadow.addColorStop(0, "#7b9652");
+    bellyShadow.addColorStop(0.55, "#4d682b");
+    bellyShadow.addColorStop(1, "#263414");
+    this.ctx.fillStyle = bellyShadow;
     this.ctx.beginPath();
-    this.ctx.ellipse(
-      center.x,
-      center.y + this.cellSize * 0.24,
-      this.cellSize * 0.28,
-      this.cellSize * 0.12,
-      0,
-      0,
-      Math.PI * 2
-    );
+    this.ctx.ellipse(center.x, center.y + this.cellSize * 0.02, bodyScale, bodyScale * 0.8, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    const body = this.ctx.createRadialGradient(
-      center.x - this.cellSize * 0.12,
-      center.y - this.cellSize * 0.14,
-      this.cellSize * 0.05,
-      center.x,
-      center.y,
-      this.cellSize * 0.4
-    );
-    body.addColorStop(0, palette.foodCore);
-    body.addColorStop(0.4, palette.foodMid);
-    body.addColorStop(1, palette.foodEdge);
+    this.ctx.fillStyle = "#31441d";
+    this.drawFrogLeg(center.x - bodyScale * 0.92, center.y + bodyScale * 0.3, -1);
+    this.drawFrogLeg(center.x + bodyScale * 0.92, center.y + bodyScale * 0.3, 1);
 
-    this.ctx.fillStyle = body;
+    this.ctx.fillStyle = "#2e4318";
     this.ctx.beginPath();
-    this.ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+    this.ctx.ellipse(center.x, center.y - bodyScale * 0.36, bodyScale * 0.84, bodyScale * 0.52, 0, 0, Math.PI * 2);
     this.ctx.fill();
 
-    this.ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    this.ctx.fillStyle = "#88a65c";
     this.ctx.beginPath();
-    this.ctx.ellipse(
-      center.x - this.cellSize * 0.12,
-      center.y - this.cellSize * 0.12,
-      this.cellSize * 0.09,
-      this.cellSize * 0.06,
-      Math.PI / 5,
-      0,
-      Math.PI * 2
-    );
+    this.ctx.arc(center.x - bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.22, 0, Math.PI * 2);
+    this.ctx.arc(center.x + bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.22, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "#eef0c9";
+    this.ctx.beginPath();
+    this.ctx.arc(center.x - bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.1, 0, Math.PI * 2);
+    this.ctx.arc(center.x + bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.1, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "#0f1408";
+    this.ctx.beginPath();
+    this.ctx.arc(center.x - bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.05, 0, Math.PI * 2);
+    this.ctx.arc(center.x + bodyScale * 0.36, center.y - bodyScale * 0.54, bodyScale * 0.05, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "rgba(227, 235, 198, 0.18)";
+    this.ctx.beginPath();
+    this.ctx.ellipse(center.x - bodyScale * 0.15, center.y - bodyScale * 0.18, bodyScale * 0.24, bodyScale * 0.11, -0.35, 0, Math.PI * 2);
     this.ctx.fill();
 
     this.ctx.restore();
   }
 
-  drawParticles() {
-    if (this.particles.length === 0) {
-      return;
-    }
-
-    this.ctx.save();
-    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
-
-    this.particles.forEach((particle) => {
-      const alpha = Math.max(0, particle.life / particle.maxLife);
-      this.ctx.save();
-      this.ctx.translate(particle.x, particle.y);
-      this.ctx.rotate(particle.rotation);
-      this.ctx.fillStyle = this.withAlpha(particle.color, alpha * 0.95);
-      this.ctx.beginPath();
-      this.ctx.roundRect(-particle.size, -particle.size, particle.size * 2.4, particle.size * 1.4, particle.size * 0.6);
-      this.ctx.fill();
-      this.ctx.restore();
-    });
-
-    this.ctx.restore();
+  drawFrogLeg(x, y, direction) {
+    this.ctx.beginPath();
+    this.ctx.ellipse(x, y, this.cellSize * 0.12, this.cellSize * 0.2, direction * 0.6, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.beginPath();
+    this.ctx.ellipse(x + direction * this.cellSize * 0.12, y + this.cellSize * 0.14, this.cellSize * 0.08, this.cellSize * 0.16, direction * 1.1, 0, Math.PI * 2);
+    this.ctx.fill();
   }
 
-  drawSnake(progress) {
-    const points = this.getInterpolatedSnake(progress).map((segment) => this.cellCenter(segment));
-    if (points.length < 2) {
+  drawSnake(progress, timestamp) {
+    const bodyWidth = this.cellSize * 0.72;
+    const pathPoints = this.getAnimatedSnakePath(progress, timestamp);
+    if (pathPoints.length < 2) {
       return;
     }
 
-    const pathPoints = this.buildSmoothPathPoints(points);
-    const gradient = this.ctx.createLinearGradient(
-      this.boardOffset.x + pathPoints[0].x,
-      this.boardOffset.y + pathPoints[0].y,
-      this.boardOffset.x + pathPoints[pathPoints.length - 1].x,
-      this.boardOffset.y + pathPoints[pathPoints.length - 1].y
-    );
-    gradient.addColorStop(0, "#8fa2b2");
-    gradient.addColorStop(0.55, "#708392");
-    gradient.addColorStop(1, "#bcc8d2");
-
-    this.ctx.save();
-    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
-
-    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-    this.ctx.lineWidth = this.cellSize * 0.78;
-    this.ctx.lineCap = "round";
-    this.ctx.lineJoin = "round";
-    this.ctx.translate(0, -this.cellSize * 0.03);
-    this.drawSmoothStroke(pathPoints);
-    this.ctx.translate(0, this.cellSize * 0.03);
-
-    this.ctx.strokeStyle = gradient;
-    this.ctx.lineWidth = this.cellSize * 0.72;
-    this.drawSmoothStroke(pathPoints);
-
+    const measured = this.measurePath(pathPoints);
     const head = pathPoints[0];
     const neck = pathPoints[1];
-    const angle = Math.atan2(head.y - neck.y, head.x - neck.x);
-    const headGradient = this.ctx.createRadialGradient(
-      head.x - this.cellSize * 0.16,
-      head.y - this.cellSize * 0.16,
-      this.cellSize * 0.06,
-      head.x,
-      head.y,
-      this.cellSize * 0.55
-    );
-    headGradient.addColorStop(0, "#dbe4eb");
-    headGradient.addColorStop(1, "#7f95a5");
-    this.ctx.fillStyle = headGradient;
-    this.ctx.beginPath();
-    this.ctx.arc(head.x, head.y, this.cellSize * 0.38, 0, Math.PI * 2);
-    this.ctx.fill();
+    const headAngle = Math.atan2(head.y - neck.y, head.x - neck.x);
 
-    this.drawHeadDetail(head, angle);
-    this.drawTail(pathPoints[pathPoints.length - 1], pathPoints[pathPoints.length - 2]);
+    this.drawSnakeShadow(pathPoints, bodyWidth);
+
+    this.ctx.save();
+    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
+
+    const bodyGradient = this.ctx.createLinearGradient(head.x, head.y, pathPoints[pathPoints.length - 1].x, pathPoints[pathPoints.length - 1].y);
+    bodyGradient.addColorStop(0, "#454822");
+    bodyGradient.addColorStop(0.32, "#6f7440");
+    bodyGradient.addColorStop(0.6, "#51572d");
+    bodyGradient.addColorStop(1, "#242712");
+
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
+    this.ctx.strokeStyle = "rgba(22, 18, 10, 0.65)";
+    this.ctx.lineWidth = bodyWidth;
+    this.drawSmoothStroke(pathPoints);
+
+    this.ctx.strokeStyle = bodyGradient;
+    this.ctx.lineWidth = bodyWidth * 0.84;
+    this.drawSmoothStroke(pathPoints);
+
+    this.drawSnakeScales(measured, bodyWidth);
+    this.drawSnakeBelly(measured, bodyWidth);
+    this.drawSnakeHead(head, headAngle, bodyWidth);
+    this.drawSnakeTail(pathPoints[pathPoints.length - 1], pathPoints[pathPoints.length - 2], bodyWidth);
     this.ctx.restore();
   }
 
-  drawHeadDetail(head, angle) {
-    const eyeOffset = this.cellSize * 0.13;
-    const eyeDistance = this.cellSize * 0.14;
-    const forward = { x: Math.cos(angle), y: Math.sin(angle) };
-    const normal = { x: -forward.y, y: forward.x };
-
-    const leftEye = {
-      x: head.x + forward.x * eyeOffset + normal.x * eyeDistance,
-      y: head.y + forward.y * eyeOffset + normal.y * eyeDistance
-    };
-    const rightEye = {
-      x: head.x + forward.x * eyeOffset - normal.x * eyeDistance,
-      y: head.y + forward.y * eyeOffset - normal.y * eyeDistance
-    };
-
-    this.ctx.fillStyle = "rgba(247, 251, 254, 0.92)";
-    this.ctx.beginPath();
-    this.ctx.arc(leftEye.x, leftEye.y, this.cellSize * 0.045, 0, Math.PI * 2);
-    this.ctx.arc(rightEye.x, rightEye.y, this.cellSize * 0.045, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.fillStyle = "rgba(69, 78, 88, 0.78)";
-    this.ctx.beginPath();
-    this.ctx.arc(leftEye.x, leftEye.y, this.cellSize * 0.022, 0, Math.PI * 2);
-    this.ctx.arc(rightEye.x, rightEye.y, this.cellSize * 0.022, 0, Math.PI * 2);
-    this.ctx.fill();
+  drawSnakeShadow(points, bodyWidth) {
+    this.ctx.save();
+    this.ctx.translate(this.boardOffset.x + this.cellSize * 0.16, this.boardOffset.y + this.cellSize * 0.2);
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
+    this.ctx.strokeStyle = "rgba(11, 9, 6, 0.28)";
+    this.ctx.lineWidth = bodyWidth * 1.05;
+    this.drawSmoothStroke(points);
+    this.ctx.restore();
   }
 
-  drawTail(tail, beforeTail) {
-    const angle = Math.atan2(tail.y - beforeTail.y, tail.x - beforeTail.x);
-    const gradient = this.ctx.createRadialGradient(
-      tail.x,
-      tail.y,
-      this.cellSize * 0.04,
-      tail.x,
-      tail.y,
-      this.cellSize * 0.32
-    );
-    gradient.addColorStop(0, "#cbd5dd");
-    gradient.addColorStop(1, "#7f95a5");
-    this.ctx.fillStyle = gradient;
+  drawSnakeScales(measured, bodyWidth) {
+    const spacing = this.cellSize * 0.18;
+    const start = bodyWidth * 0.9;
+    const end = measured.totalLength - bodyWidth * 0.6;
+
+    for (let distance = start; distance < end; distance += spacing) {
+      const sample = this.samplePath(measured, distance);
+      if (!sample) {
+        continue;
+      }
+
+      const taper = 1 - distance / measured.totalLength;
+      const scaleSize = Math.max(2.2, bodyWidth * 0.12 * (0.7 + taper * 0.6));
+      const offsets = [-0.24, 0, 0.24];
+
+      offsets.forEach((offset, index) => {
+        const px = sample.x + sample.normal.x * bodyWidth * offset;
+        const py = sample.y + sample.normal.y * bodyWidth * offset;
+        this.ctx.fillStyle = index === 1 ? "rgba(198, 205, 138, 0.26)" : "rgba(43, 47, 22, 0.34)";
+        this.ctx.beginPath();
+        this.ctx.ellipse(px, py, scaleSize * (index === 1 ? 0.95 : 0.82), scaleSize * 0.68, sample.angle, 0, Math.PI * 2);
+        this.ctx.fill();
+      });
+    }
+  }
+
+  drawSnakeBelly(measured, bodyWidth) {
+    const spacing = this.cellSize * 0.24;
+    const start = bodyWidth * 1.1;
+    const end = measured.totalLength - bodyWidth * 0.8;
+
+    for (let distance = start; distance < end; distance += spacing) {
+      const sample = this.samplePath(measured, distance);
+      if (!sample) {
+        continue;
+      }
+
+      const px = sample.x - sample.normal.x * bodyWidth * 0.14;
+      const py = sample.y - sample.normal.y * bodyWidth * 0.14;
+      this.ctx.fillStyle = "rgba(146, 138, 92, 0.28)";
+      this.ctx.beginPath();
+      this.ctx.ellipse(px, py, bodyWidth * 0.13, bodyWidth * 0.09, sample.angle, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  drawSnakeHead(head, angle, bodyWidth) {
+    const gulp = this.swallowPulse;
+
+    this.ctx.save();
+    this.ctx.translate(head.x, head.y);
+    this.ctx.rotate(angle);
+
+    const headGradient = this.ctx.createRadialGradient(bodyWidth * 0.08, -bodyWidth * 0.12, bodyWidth * 0.08, 0, 0, bodyWidth * 0.9);
+    headGradient.addColorStop(0, "#878c4d");
+    headGradient.addColorStop(0.6, "#575c2c");
+    headGradient.addColorStop(1, "#252713");
+    this.ctx.fillStyle = headGradient;
     this.ctx.beginPath();
-    this.ctx.ellipse(
-      tail.x,
-      tail.y,
-      this.cellSize * 0.24,
-      this.cellSize * 0.18,
-      angle,
-      0,
-      Math.PI * 2
-    );
+    this.ctx.ellipse(0, 0, bodyWidth * 0.68, bodyWidth * 0.48, 0, 0, Math.PI * 2);
     this.ctx.fill();
+
+    if (gulp > 0) {
+      this.ctx.fillStyle = `rgba(188, 173, 106, ${0.12 + gulp * 0.16})`;
+      this.ctx.beginPath();
+      this.ctx.ellipse(-bodyWidth * 0.42, 0, bodyWidth * (0.26 + gulp * 0.08), bodyWidth * (0.16 + gulp * 0.05), 0, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+
+    this.ctx.fillStyle = "rgba(223, 224, 174, 0.22)";
+    this.ctx.beginPath();
+    this.ctx.ellipse(-bodyWidth * 0.04, -bodyWidth * 0.12, bodyWidth * 0.26, bodyWidth * 0.11, -0.28, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "#11130b";
+    this.ctx.beginPath();
+    this.ctx.arc(bodyWidth * 0.18, -bodyWidth * 0.16, bodyWidth * 0.065, 0, Math.PI * 2);
+    this.ctx.arc(bodyWidth * 0.18, bodyWidth * 0.16, bodyWidth * 0.065, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "rgba(249, 237, 167, 0.82)";
+    this.ctx.beginPath();
+    this.ctx.arc(bodyWidth * 0.18, -bodyWidth * 0.16, bodyWidth * 0.028, 0, Math.PI * 2);
+    this.ctx.arc(bodyWidth * 0.18, bodyWidth * 0.16, bodyWidth * 0.028, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "rgba(19, 15, 9, 0.42)";
+    this.ctx.beginPath();
+    this.ctx.arc(bodyWidth * 0.42, -bodyWidth * 0.08, bodyWidth * 0.03, 0, Math.PI * 2);
+    this.ctx.arc(bodyWidth * 0.42, bodyWidth * 0.08, bodyWidth * 0.03, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.restore();
+  }
+
+  drawSnakeTail(tail, beforeTail, bodyWidth) {
+    const angle = Math.atan2(tail.y - beforeTail.y, tail.x - beforeTail.x);
+
+    this.ctx.save();
+    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
+    this.ctx.fillStyle = "#232411";
+    this.ctx.beginPath();
+    this.ctx.ellipse(tail.x, tail.y, bodyWidth * 0.22, bodyWidth * 0.14, angle, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  getAnimatedSnakePath(progress, timestamp) {
+    const points = this.getInterpolatedSnake(progress).map((segment) => this.cellCenter(segment));
+    const pathPoints = this.buildSmoothPathPoints(points);
+
+    return pathPoints.map((point, index) => {
+      if (index === 0 || index === pathPoints.length - 1) {
+        return point;
+      }
+
+      const previous = pathPoints[index - 1];
+      const next = pathPoints[index + 1];
+      const tangent = this.normalize({ x: next.x - previous.x, y: next.y - previous.y });
+      const normal = { x: -tangent.y, y: tangent.x };
+      const fade = 1 - index / (pathPoints.length - 1);
+      const sway = Math.sin(timestamp / 120 + index * 0.72) * this.cellSize * 0.07 * fade;
+
+      return {
+        x: point.x + normal.x * sway,
+        y: point.y + normal.y * sway
+      };
+    });
   }
 
   drawSmoothStroke(points) {
@@ -932,20 +924,67 @@ class SnakeFlow {
     return visualSnake;
   }
 
-  drawAmbientHighlights(width, height) {
-    const palette = this.themes[this.themeName];
-    const glow = this.ctx.createRadialGradient(
-      width * 0.18,
-      height * 0.12,
-      0,
-      width * 0.18,
-      height * 0.12,
-      width * 0.38
-    );
-    glow.addColorStop(0, palette.ambientGlow);
-    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
-    this.ctx.fillStyle = glow;
+  drawAtmosphere(width, height, timestamp) {
+    const vignette = this.ctx.createRadialGradient(width * 0.48, height * 0.38, width * 0.18, width * 0.5, height * 0.48, width * 0.72);
+    vignette.addColorStop(0, "rgba(255, 246, 212, 0)");
+    vignette.addColorStop(1, "rgba(0, 0, 0, 0.34)");
+    this.ctx.fillStyle = vignette;
     this.ctx.fillRect(0, 0, width, height);
+
+    for (let i = 0; i < 4; i += 1) {
+      const bandY = height * (0.15 + i * 0.18) + Math.sin(timestamp / 900 + i) * 6;
+      const mist = this.ctx.createLinearGradient(0, bandY - 30, 0, bandY + 30);
+      mist.addColorStop(0, "rgba(0, 0, 0, 0)");
+      mist.addColorStop(0.5, "rgba(219, 223, 205, 0.028)");
+      mist.addColorStop(1, "rgba(0, 0, 0, 0)");
+      this.ctx.fillStyle = mist;
+      this.ctx.fillRect(0, bandY - 30, width, 60);
+    }
+  }
+
+  measurePath(points) {
+    const segments = [];
+    let totalLength = 0;
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const start = points[index];
+      const end = points[index + 1];
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy);
+      segments.push({ start, end, length, cumulative: totalLength });
+      totalLength += length;
+    }
+
+    return { points, segments, totalLength };
+  }
+
+  samplePath(measured, distance) {
+    const clamped = Math.max(0, Math.min(distance, measured.totalLength));
+
+    for (const segment of measured.segments) {
+      if (clamped <= segment.cumulative + segment.length || segment === measured.segments[measured.segments.length - 1]) {
+        const local = segment.length === 0 ? 0 : (clamped - segment.cumulative) / segment.length;
+        const tangent = this.normalize({
+          x: segment.end.x - segment.start.x,
+          y: segment.end.y - segment.start.y
+        });
+        return {
+          x: segment.start.x + (segment.end.x - segment.start.x) * local,
+          y: segment.start.y + (segment.end.y - segment.start.y) * local,
+          tangent,
+          normal: { x: -tangent.y, y: tangent.x },
+          angle: Math.atan2(tangent.y, tangent.x)
+        };
+      }
+    }
+
+    return null;
+  }
+
+  normalize(vector) {
+    const length = Math.hypot(vector.x, vector.y) || 1;
+    return { x: vector.x / length, y: vector.y / length };
   }
 
   cellCenter(point) {
@@ -963,10 +1002,6 @@ class SnakeFlow {
     context.arcTo(x, y + height, x, y, radius);
     context.arcTo(x, y, x + width, y, radius);
     context.closePath();
-  }
-
-  withAlpha(rgb, alpha) {
-    return `rgba(${rgb}, ${alpha})`;
   }
 }
 

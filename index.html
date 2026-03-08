@@ -3,31 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snake Flow</title>
+  <title>Marsh Serpent</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="dawn">
+<body>
   <main class="app-shell">
     <section class="game-card" aria-label="Snake game">
-      <header class="topbar">
-        <div class="brand">
-          <p class="eyebrow">Canvas Snake</p>
-          <h1>Snake Flow</h1>
+      <header class="scene-meta">
+        <div class="brand-plaque">
+          <p class="brand-kicker">Field Study</p>
+          <h1>Marsh Serpent</h1>
         </div>
-        <div class="stats" aria-label="Game stats">
-          <article class="stat">
-            <span class="stat-label">Score</span>
-            <strong id="score">0</strong>
-          </article>
-          <article class="stat">
-            <span class="stat-label">Best</span>
-            <strong id="best-score">0</strong>
-          </article>
-          <article class="stat">
-            <span class="stat-label">State</span>
-            <strong id="status-text">Ready</strong>
-          </article>
-        </div>
+
+        <aside class="scoreboard" aria-label="Game stats">
+          <p class="score-heading">Score</p>
+          <strong id="score" class="score-main">0</strong>
+          <dl class="score-meta">
+            <div>
+              <dt>Best</dt>
+              <dd id="best-score">0</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd id="status-text">Idle</dd>
+            </div>
+          </dl>
+        </aside>
       </header>
 
       <section class="stage-shell">
@@ -36,21 +37,21 @@
 
           <div id="start-overlay" class="overlay overlay-visible">
             <div class="overlay-panel">
-              <p class="overlay-kicker">Minimal motion snake</p>
-              <h2>平滑滑行，而不是格子跳动</h2>
+              <p class="overlay-kicker">Wetland chase</p>
+              <h2>潜入草地，追猎青蛙</h2>
               <p class="overlay-copy">
-                方向键或 WASD 控制方向。吃掉发光能量球增长身体，避免撞墙或撞到自己。
+                方向键或 WASD 控制蛇的走向。追上草丛里的青蛙，避开边界与自己的身体。
               </p>
-              <button id="start-button" class="primary-button" type="button">开始游戏</button>
+              <button id="start-button" class="primary-button" type="button">开始狩猎</button>
             </div>
           </div>
 
           <div id="game-over-overlay" class="overlay" aria-hidden="true">
             <div class="overlay-panel">
-              <p class="overlay-kicker">Run ended</p>
-              <h2>游戏结束</h2>
+              <p class="overlay-kicker">Trail lost</p>
+              <h2>猎踪中断</h2>
               <p class="overlay-copy">本局得分 <span id="final-score">0</span></p>
-              <button id="restart-button" class="primary-button" type="button">再来一次</button>
+              <button id="restart-button" class="primary-button" type="button">重新追踪</button>
             </div>
           </div>
         </div>
@@ -58,19 +59,12 @@
 
       <footer class="footer-bar">
         <p>方向键 / WASD 转向，空格重新开始</p>
-        <div class="footer-actions">
-          <div class="theme-switch" role="group" aria-label="Map themes">
-            <button class="theme-chip is-active" type="button" data-theme-option="dawn">晨雾</button>
-            <button class="theme-chip" type="button" data-theme-option="night">暗夜</button>
-            <button class="theme-chip" type="button" data-theme-option="cyber">赛博</button>
-          </div>
-          <div class="touch-controls" aria-label="Touch controls">
-            <button class="touch-button" type="button" data-direction="up" aria-label="Up">↑</button>
-            <div class="touch-row">
-              <button class="touch-button" type="button" data-direction="left" aria-label="Left">←</button>
-              <button class="touch-button" type="button" data-direction="down" aria-label="Down">↓</button>
-              <button class="touch-button" type="button" data-direction="right" aria-label="Right">→</button>
-            </div>
+        <div class="touch-controls" aria-label="Touch controls">
+          <button class="touch-button" type="button" data-direction="up" aria-label="Up">↑</button>
+          <div class="touch-row">
+            <button class="touch-button" type="button" data-direction="left" aria-label="Left">←</button>
+            <button class="touch-button" type="button" data-direction="down" aria-label="Down">↓</button>
+            <button class="touch-button" type="button" data-direction="right" aria-label="Right">→</button>
           </div>
         </div>
       </footer>
