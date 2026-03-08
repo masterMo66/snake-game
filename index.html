@@ -32,9 +32,10 @@
                 </div>
 
                 <div class="canvas-container">
-                    <canvas id="game-canvas" width="600" height="400"></canvas>
+                    <canvas id="game-canvas" width="800" height="500"></canvas>
                     <div id="game-over" class="game-over">
                         <h2>Game Over!</h2>
+                        <div id="crying-snake"></div>
                         <p>Your score: <span id="final-score">0</span></p>
                         <button id="restart-btn" class="btn"><i class="fas fa-redo"></i> Play Again</button>
                     </div>
@@ -46,6 +47,26 @@
                             <button class="difficulty-btn active" data-speed="150">Normal</button>
                             <button class="difficulty-btn" data-speed="100">Fast</button>
                             <button class="difficulty-btn" data-speed="70">Extreme</button>
+                        </div>
+                    </div>
+                    
+                    <!-- On-screen controls -->
+                    <div class="on-screen-controls">
+                        <div class="control-row">
+                            <button class="control-btn up" data-direction="up">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                        </div>
+                        <div class="control-row">
+                            <button class="control-btn left" data-direction="left">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="control-btn down" data-direction="down">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button class="control-btn right" data-direction="right">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
