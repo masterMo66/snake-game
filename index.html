@@ -1,145 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Flow</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-gamepad"></i> Snake Game</h1>
-            <p class="subtitle">A classic snake game built with HTML5 Canvas</p>
-        </header>
+  <main class="app-shell">
+    <section class="game-card" aria-label="Snake game">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">Canvas Snake</p>
+          <h1>Snake Flow</h1>
+        </div>
+        <div class="stats" aria-label="Game stats">
+          <article class="stat">
+            <span class="stat-label">Score</span>
+            <strong id="score">0</strong>
+          </article>
+          <article class="stat">
+            <span class="stat-label">Best</span>
+            <strong id="best-score">0</strong>
+          </article>
+          <article class="stat">
+            <span class="stat-label">State</span>
+            <strong id="status-text">Ready</strong>
+          </article>
+        </div>
+      </header>
 
-        <main>
-            <div class="game-area">
-                <div class="score-board">
-                    <div class="score-item">
-                        <span class="score-label">Score</span>
-                        <span id="score" class="score-value">0</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="score-label">High Score</span>
-                        <span id="high-score" class="score-value">0</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="score-label">Speed</span>
-                        <span id="speed" class="score-value">Normal</span>
-                    </div>
-                </div>
+      <section class="stage-shell">
+        <div class="canvas-frame">
+          <canvas id="game-canvas" aria-label="Snake game canvas"></canvas>
 
-                <div class="canvas-container">
-                    <canvas id="game-canvas" width="800" height="500"></canvas>
-                    <div id="game-over" class="game-over">
-                        <h2>Game Over!</h2>
-                        <div id="crying-snake"></div>
-                        <p>Your score: <span id="final-score">0</span></p>
-                        <button id="restart-btn" class="btn"><i class="fas fa-redo"></i> Play Again</button>
-                    </div>
-                    <div id="start-screen" class="start-screen">
-                        <h2>Ready to Play?</h2>
-                        <p>Use <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to control the snake</p>
-                        <button id="start-btn" class="btn"><i class="fas fa-play"></i> Start Game</button>
-                        <div class="difficulty">
-                            <button class="difficulty-btn active" data-speed="150">Normal</button>
-                            <button class="difficulty-btn" data-speed="100">Fast</button>
-                            <button class="difficulty-btn" data-speed="70">Extreme</button>
-                        </div>
-                    </div>
-                    
-                    <!-- On-screen controls -->
-                    <div class="on-screen-controls">
-                        <div class="control-row">
-                            <button class="control-btn up" data-direction="up">
-                                <i class="fas fa-arrow-up"></i>
-                            </button>
-                        </div>
-                        <div class="control-row">
-                            <button class="control-btn left" data-direction="left">
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <button class="control-btn down" data-direction="down">
-                                <i class="fas fa-arrow-down"></i>
-                            </button>
-                            <button class="control-btn right" data-direction="right">
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="controls">
-                    <div class="control-group">
-                        <h3><i class="fas fa-keyboard"></i> Controls</h3>
-                        <div class="keyboard">
-                            <div class="key-row">
-                                <div class="key">W / ↑</div>
-                                <div class="key-label">Up</div>
-                            </div>
-                            <div class="key-row">
-                                <div class="key">A / ←</div>
-                                <div class="key-label">Left</div>
-                            </div>
-                            <div class="key-row">
-                                <div class="key">S / ↓</div>
-                                <div class="key-label">Down</div>
-                            </div>
-                            <div class="key-row">
-                                <div class="key">D / →</div>
-                                <div class="key-label">Right</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-group">
-                        <h3><i class="fas fa-cog"></i> Game Settings</h3>
-                        <div class="settings">
-                            <div class="setting">
-                                <label for="grid-toggle">Show Grid</label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="grid-toggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting">
-                                <label for="sound-toggle">Sound Effects</label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="sound-toggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+          <div id="start-overlay" class="overlay overlay-visible">
+            <div class="overlay-panel">
+              <p class="overlay-kicker">Minimal motion snake</p>
+              <h2>平滑滑行，而不是格子跳动</h2>
+              <p class="overlay-copy">
+                方向键或 WASD 控制方向。吃掉光点增长身体，避免撞墙或撞到自己。
+              </p>
+              <button id="start-button" class="primary-button" type="button">开始游戏</button>
             </div>
+          </div>
 
-            <div class="instructions">
-                <h3><i class="fas fa-info-circle"></i> How to Play</h3>
-                <ul>
-                    <li>Control the snake to eat the red food</li>
-                    <li>Each food eaten increases your score and snake length</li>
-                    <li>Avoid hitting the walls or the snake's own body</li>
-                    <li>Change difficulty for faster gameplay</li>
-                    <li>Try to beat your high score!</li>
-                </ul>
+          <div id="game-over-overlay" class="overlay" aria-hidden="true">
+            <div class="overlay-panel">
+              <p class="overlay-kicker">Run ended</p>
+              <h2>游戏结束</h2>
+              <p class="overlay-copy">本局得分 <span id="final-score">0</span></p>
+              <button id="restart-button" class="primary-button" type="button">再来一次</button>
             </div>
-        </main>
+          </div>
+        </div>
+      </section>
 
-        <footer>
-            <p>Snake Game &copy; 2026 | Built with HTML5 Canvas | <a href="https://github.com/masterMo66/snake-game" target="_blank"><i class="fab fa-github"></i> View on GitHub</a></p>
-        </footer>
-    </div>
+      <footer class="footer-bar">
+        <p>方向键 / WASD 转向，空格重新开始</p>
+        <div class="touch-controls" aria-label="Touch controls">
+          <button class="touch-button" type="button" data-direction="up" aria-label="Up">↑</button>
+          <div class="touch-row">
+            <button class="touch-button" type="button" data-direction="left" aria-label="Left">←</button>
+            <button class="touch-button" type="button" data-direction="down" aria-label="Down">↓</button>
+            <button class="touch-button" type="button" data-direction="right" aria-label="Right">→</button>
+          </div>
+        </div>
+      </footer>
+    </section>
+  </main>
 
-    <audio id="eat-sound" preload="auto">
-        <source src="https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="gameover-sound" preload="auto">
-        <source src="https://assets.mixkit.co/sfx/preview/mixkit-retro-game-over-1947.mp3" type="audio/mpeg">
-    </audio>
-
-    <script src="game.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
