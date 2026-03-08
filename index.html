@@ -6,7 +6,7 @@
   <title>Snake Flow</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="dawn">
   <main class="app-shell">
     <section class="game-card" aria-label="Snake game">
       <header class="topbar">
@@ -39,7 +39,7 @@
               <p class="overlay-kicker">Minimal motion snake</p>
               <h2>平滑滑行，而不是格子跳动</h2>
               <p class="overlay-copy">
-                方向键或 WASD 控制方向。吃掉光点增长身体，避免撞墙或撞到自己。
+                方向键或 WASD 控制方向。吃掉发光能量球增长身体，避免撞墙或撞到自己。
               </p>
               <button id="start-button" class="primary-button" type="button">开始游戏</button>
             </div>
@@ -58,12 +58,19 @@
 
       <footer class="footer-bar">
         <p>方向键 / WASD 转向，空格重新开始</p>
-        <div class="touch-controls" aria-label="Touch controls">
-          <button class="touch-button" type="button" data-direction="up" aria-label="Up">↑</button>
-          <div class="touch-row">
-            <button class="touch-button" type="button" data-direction="left" aria-label="Left">←</button>
-            <button class="touch-button" type="button" data-direction="down" aria-label="Down">↓</button>
-            <button class="touch-button" type="button" data-direction="right" aria-label="Right">→</button>
+        <div class="footer-actions">
+          <div class="theme-switch" role="group" aria-label="Map themes">
+            <button class="theme-chip is-active" type="button" data-theme-option="dawn">晨雾</button>
+            <button class="theme-chip" type="button" data-theme-option="night">暗夜</button>
+            <button class="theme-chip" type="button" data-theme-option="cyber">赛博</button>
+          </div>
+          <div class="touch-controls" aria-label="Touch controls">
+            <button class="touch-button" type="button" data-direction="up" aria-label="Up">↑</button>
+            <div class="touch-row">
+              <button class="touch-button" type="button" data-direction="left" aria-label="Left">←</button>
+              <button class="touch-button" type="button" data-direction="down" aria-label="Down">↓</button>
+              <button class="touch-button" type="button" data-direction="right" aria-label="Right">→</button>
+            </div>
           </div>
         </div>
       </footer>

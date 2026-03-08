@@ -13,18 +13,79 @@ class SnakeFlow {
     this.startButton = document.getElementById("start-button");
     this.restartButton = document.getElementById("restart-button");
     this.touchButtons = document.querySelectorAll("[data-direction]");
+    this.themeButtons = document.querySelectorAll("[data-theme-option]");
 
     this.grid = { cols: 24, rows: 15 };
     this.baseStepDuration = 150;
     this.minStepDuration = 84;
+    this.maxStepsPerFrame = 3;
     this.cellSize = 24;
     this.boardOffset = { x: 0, y: 0 };
     this.dpr = window.devicePixelRatio || 1;
+    this.lastFrameTime = 0;
+    this.particles = [];
+    this.screenShake = 0;
+    this.themeName = localStorage.getItem("snake-flow-theme") || "dawn";
+
+    this.themes = {
+      dawn: {
+        status: "晨雾",
+        frameTop: "rgba(255, 255, 255, 0.5)",
+        frameBottom: "rgba(218, 224, 230, 0.22)",
+        boardStart: "rgba(252, 250, 246, 0.98)",
+        boardEnd: "rgba(230, 234, 239, 0.74)",
+        boardGlow: "rgba(255, 255, 255, 0.22)",
+        gridLine: "rgba(104, 112, 122, 0.075)",
+        borderGlow: "rgba(255, 255, 255, 0.32)",
+        ambientGlow: "rgba(255, 255, 255, 0.24)",
+        foodCore: "#fff4d8",
+        foodMid: "#ff9f7e",
+        foodEdge: "#f36f53",
+        foodShadow: "rgba(188, 92, 71, 0.28)",
+        foodGlow: "rgba(255, 131, 103, 0.82)",
+        particleColor: "255, 131, 103"
+      },
+      night: {
+        status: "暗夜",
+        frameTop: "rgba(74, 82, 95, 0.22)",
+        frameBottom: "rgba(10, 13, 18, 0.58)",
+        boardStart: "rgba(24, 28, 34, 0.98)",
+        boardEnd: "rgba(14, 17, 21, 0.98)",
+        boardGlow: "rgba(255, 255, 255, 0.03)",
+        gridLine: "rgba(221, 228, 238, 0.065)",
+        borderGlow: "rgba(255, 255, 255, 0.08)",
+        ambientGlow: "rgba(168, 182, 204, 0.12)",
+        foodCore: "#fff8c1",
+        foodMid: "#ffd361",
+        foodEdge: "#ffb11e",
+        foodShadow: "rgba(255, 177, 30, 0.24)",
+        foodGlow: "rgba(255, 200, 92, 0.78)",
+        particleColor: "255, 196, 86"
+      },
+      cyber: {
+        status: "赛博",
+        frameTop: "rgba(0, 255, 231, 0.12)",
+        frameBottom: "rgba(10, 12, 20, 0.62)",
+        boardStart: "rgba(25, 28, 35, 0.98)",
+        boardEnd: "rgba(16, 19, 27, 0.98)",
+        boardGlow: "rgba(0, 255, 231, 0.08)",
+        gridLine: "rgba(122, 255, 243, 0.1)",
+        borderGlow: "rgba(0, 255, 231, 0.2)",
+        ambientGlow: "rgba(0, 255, 231, 0.14)",
+        foodCore: "#f9ffd2",
+        foodMid: "#f8ff58",
+        foodEdge: "#d0ff21",
+        foodShadow: "rgba(155, 255, 0, 0.28)",
+        foodGlow: "rgba(236, 255, 87, 0.88)",
+        particleColor: "236, 255, 87"
+      }
+    };
 
     this.bestScore = Number(localStorage.getItem("snake-flow-best") || 0);
 
     this.reset();
     this.bindEvents();
+    this.applyTheme(this.themeName);
     this.resizeCanvas();
     this.bestScoreElement.textContent = String(this.bestScore);
     requestAnimationFrame((timestamp) => this.animate(timestamp));
@@ -48,6 +109,8 @@ class SnakeFlow {
     this.gameOver = false;
     this.lastStepTime = 0;
     this.currentStepDuration = this.baseStepDuration;
+    this.particles = [];
+    this.screenShake = 0;
     this.scoreElement.textContent = "0";
     this.statusElement.textContent = "Ready";
     this.finalScoreElement.textContent = "0";
@@ -71,6 +134,24 @@ class SnakeFlow {
         { passive: false }
       );
     });
+
+    this.themeButtons.forEach((button) => {
+      button.addEventListener("click", () => this.applyTheme(button.dataset.themeOption));
+    });
+  }
+
+  applyTheme(themeName) {
+    if (!this.themes[themeName]) {
+      return;
+    }
+
+    this.themeName = themeName;
+    document.body.dataset.theme = themeName;
+    localStorage.setItem("snake-flow-theme", themeName);
+
+    this.themeButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.themeOption === themeName);
+    });
   }
 
   start() {
@@ -79,7 +160,7 @@ class SnakeFlow {
     this.lastStepTime = performance.now();
     this.startOverlay.classList.remove("overlay-visible");
     this.gameOverOverlay.classList.remove("overlay-visible");
-    this.statusElement.textContent = "Running";
+    this.statusElement.textContent = this.themes[this.themeName].status;
   }
 
   restart() {
@@ -98,6 +179,12 @@ class SnakeFlow {
       KeyD: "right"
     };
 
+    const themeMap = {
+      Digit1: "dawn",
+      Digit2: "night",
+      Digit3: "cyber"
+    };
+
     if (event.code === "Space" && this.gameOver) {
       event.preventDefault();
       this.restart();
@@ -107,6 +194,11 @@ class SnakeFlow {
     if (event.code === "Enter" && !this.running && !this.gameOver) {
       event.preventDefault();
       this.start();
+      return;
+    }
+
+    if (themeMap[event.code]) {
+      this.applyTheme(themeMap[event.code]);
       return;
     }
 
@@ -182,12 +274,32 @@ class SnakeFlow {
   }
 
   animate(timestamp) {
+    if (!this.lastFrameTime) {
+      this.lastFrameTime = timestamp;
+    }
+
+    const delta = Math.min(32, timestamp - this.lastFrameTime);
+    this.lastFrameTime = timestamp;
+    this.updateEffects(delta);
+
     if (this.running && !this.gameOver) {
       let elapsed = timestamp - this.lastStepTime;
-      while (elapsed >= this.currentStepDuration && this.running && !this.gameOver) {
+      let steps = 0;
+
+      while (
+        elapsed >= this.currentStepDuration &&
+        this.running &&
+        !this.gameOver &&
+        steps < this.maxStepsPerFrame
+      ) {
         this.step();
         this.lastStepTime += this.currentStepDuration;
         elapsed = timestamp - this.lastStepTime;
+        steps += 1;
+      }
+
+      if (steps === this.maxStepsPerFrame && elapsed >= this.currentStepDuration) {
+        this.lastStepTime = timestamp;
       }
     }
 
@@ -197,8 +309,21 @@ class SnakeFlow {
         ? 1
         : 0;
 
-    this.render(progress);
+    this.render(progress, timestamp);
     requestAnimationFrame((nextTimestamp) => this.animate(nextTimestamp));
+  }
+
+  updateEffects(delta) {
+    this.screenShake = Math.max(0, this.screenShake - delta * 0.014);
+
+    this.particles = this.particles.filter((particle) => {
+      particle.velocityY += particle.gravity * delta;
+      particle.x += particle.velocityX * delta;
+      particle.y += particle.velocityY * delta;
+      particle.rotation += particle.spin * delta;
+      particle.life -= delta;
+      return particle.life > 0;
+    });
   }
 
   step() {
@@ -235,9 +360,12 @@ class SnakeFlow {
     this.snake.unshift(head);
 
     if (willGrow) {
+      const burstSource = { ...this.food };
       this.score += 10;
       this.scoreElement.textContent = String(this.score);
       this.finalScoreElement.textContent = String(this.score);
+      this.spawnFoodBurst(burstSource);
+      this.screenShake = Math.max(this.screenShake, this.cellSize * 0.08);
       this.food = this.randomFood();
       this.currentStepDuration = Math.max(
         this.minStepDuration,
@@ -245,6 +373,30 @@ class SnakeFlow {
       );
     } else {
       this.snake.pop();
+    }
+  }
+
+  spawnFoodBurst(foodPoint) {
+    const palette = this.themes[this.themeName];
+    const center = this.cellCenter(foodPoint);
+    const count = 34;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (0.06 + Math.random() * 0.17) * this.cellSize;
+      this.particles.push({
+        x: center.x,
+        y: center.y,
+        velocityX: Math.cos(angle) * speed,
+        velocityY: Math.sin(angle) * speed - this.cellSize * 0.02,
+        gravity: 0.00042 * this.cellSize,
+        life: 360 + Math.random() * 280,
+        maxLife: 640,
+        size: 1.2 + Math.random() * (this.cellSize * 0.09),
+        rotation: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.02,
+        color: palette.particleColor
+      });
     }
   }
 
@@ -262,22 +414,29 @@ class SnakeFlow {
     }
   }
 
-  render(progress) {
+  render(progress, timestamp) {
     const width = this.canvas.width / this.dpr;
     const height = this.canvas.height / this.dpr;
+    const shakeX = this.screenShake > 0 ? (Math.random() - 0.5) * this.screenShake : 0;
+    const shakeY = this.screenShake > 0 ? (Math.random() - 0.5) * this.screenShake : 0;
 
     this.ctx.clearRect(0, 0, width, height);
+    this.ctx.save();
+    this.ctx.translate(shakeX, shakeY);
     this.drawBackground(width, height);
     this.drawBoard();
-    this.drawFood(progress);
+    this.drawFood(progress, timestamp);
+    this.drawParticles();
     this.drawSnake(progress);
-    this.drawAmbientHighlights();
+    this.drawAmbientHighlights(width, height);
+    this.ctx.restore();
   }
 
   drawBackground(width, height) {
+    const palette = this.themes[this.themeName];
     const background = this.ctx.createLinearGradient(0, 0, width, height);
-    background.addColorStop(0, "rgba(255, 255, 255, 0.44)");
-    background.addColorStop(1, "rgba(208, 213, 220, 0.18)");
+    background.addColorStop(0, palette.frameTop);
+    background.addColorStop(1, palette.frameBottom);
     this.ctx.fillStyle = background;
     this.ctx.fillRect(0, 0, width, height);
 
@@ -290,8 +449,8 @@ class SnakeFlow {
       this.grid.cols * this.cellSize,
       this.grid.rows * this.cellSize
     );
-    boardGradient.addColorStop(0, "rgba(248, 245, 240, 0.94)");
-    boardGradient.addColorStop(1, "rgba(220, 225, 232, 0.54)");
+    boardGradient.addColorStop(0, palette.boardStart);
+    boardGradient.addColorStop(1, palette.boardEnd);
 
     this.roundRect(
       this.ctx,
@@ -303,18 +462,32 @@ class SnakeFlow {
     );
     this.ctx.fillStyle = boardGradient;
     this.ctx.fill();
+
+    this.ctx.strokeStyle = palette.borderGlow;
+    this.ctx.lineWidth = this.themeName === "cyber" ? 1.2 : 1;
+    this.ctx.stroke();
+
+    if (this.themeName === "cyber") {
+      this.ctx.shadowBlur = 16;
+      this.ctx.shadowColor = palette.borderGlow;
+      this.ctx.strokeStyle = "rgba(124, 255, 243, 0.14)";
+      this.ctx.stroke();
+    }
+
     this.ctx.restore();
   }
 
   drawBoard() {
+    const palette = this.themes[this.themeName];
+
     this.ctx.save();
     this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
 
     const width = this.grid.cols * this.cellSize;
     const height = this.grid.rows * this.cellSize;
 
-    this.ctx.strokeStyle = "rgba(110, 120, 132, 0.08)";
-    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = palette.gridLine;
+    this.ctx.lineWidth = 0.6;
 
     for (let col = 1; col < this.grid.cols; col += 1) {
       const x = col * this.cellSize;
@@ -332,31 +505,101 @@ class SnakeFlow {
       this.ctx.stroke();
     }
 
+    if (this.themeName === "cyber") {
+      this.ctx.strokeStyle = "rgba(113, 255, 242, 0.06)";
+      this.ctx.lineWidth = 1;
+      this.roundRect(this.ctx, this.cellSize * 0.2, this.cellSize * 0.2, width - this.cellSize * 0.4, height - this.cellSize * 0.4, this.cellSize * 0.72);
+      this.ctx.stroke();
+    }
+
     this.ctx.restore();
   }
 
-  drawFood(progress) {
-    const pulse = 0.96 + Math.sin((performance.now() + progress * 200) / 210) * 0.04;
-    const point = this.cellCenter(this.food);
-    const radius = this.cellSize * 0.28 * pulse;
+  drawFood(progress, timestamp) {
+    const palette = this.themes[this.themeName];
+    const pulse = 0.9 + Math.sin(timestamp / 220) * 0.08;
+    const center = this.cellCenter(this.food);
+    const radius = this.cellSize * 0.26 * pulse;
 
     this.ctx.save();
     this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
 
-    const glow = this.ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, this.cellSize);
-    glow.addColorStop(0, "rgba(247, 190, 172, 0.95)");
-    glow.addColorStop(0.52, "rgba(220, 162, 145, 0.68)");
-    glow.addColorStop(1, "rgba(220, 162, 145, 0)");
+    const glow = this.ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, this.cellSize * 1.12);
+    glow.addColorStop(0, palette.foodGlow);
+    glow.addColorStop(0.55, this.withAlpha(palette.particleColor, 0.34));
+    glow.addColorStop(1, this.withAlpha(palette.particleColor, 0));
 
     this.ctx.fillStyle = glow;
     this.ctx.beginPath();
-    this.ctx.arc(point.x, point.y, this.cellSize * 0.8, 0, Math.PI * 2);
+    this.ctx.arc(center.x, center.y, this.cellSize * 0.92, 0, Math.PI * 2);
     this.ctx.fill();
 
-    this.ctx.fillStyle = "rgba(244, 209, 201, 0.95)";
+    this.ctx.fillStyle = palette.foodShadow;
     this.ctx.beginPath();
-    this.ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    this.ctx.ellipse(
+      center.x,
+      center.y + this.cellSize * 0.24,
+      this.cellSize * 0.28,
+      this.cellSize * 0.12,
+      0,
+      0,
+      Math.PI * 2
+    );
     this.ctx.fill();
+
+    const body = this.ctx.createRadialGradient(
+      center.x - this.cellSize * 0.12,
+      center.y - this.cellSize * 0.14,
+      this.cellSize * 0.05,
+      center.x,
+      center.y,
+      this.cellSize * 0.4
+    );
+    body.addColorStop(0, palette.foodCore);
+    body.addColorStop(0.4, palette.foodMid);
+    body.addColorStop(1, palette.foodEdge);
+
+    this.ctx.fillStyle = body;
+    this.ctx.beginPath();
+    this.ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    this.ctx.beginPath();
+    this.ctx.ellipse(
+      center.x - this.cellSize * 0.12,
+      center.y - this.cellSize * 0.12,
+      this.cellSize * 0.09,
+      this.cellSize * 0.06,
+      Math.PI / 5,
+      0,
+      Math.PI * 2
+    );
+    this.ctx.fill();
+
+    this.ctx.restore();
+  }
+
+  drawParticles() {
+    if (this.particles.length === 0) {
+      return;
+    }
+
+    this.ctx.save();
+    this.ctx.translate(this.boardOffset.x, this.boardOffset.y);
+
+    this.particles.forEach((particle) => {
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      this.ctx.save();
+      this.ctx.translate(particle.x, particle.y);
+      this.ctx.rotate(particle.rotation);
+      this.ctx.fillStyle = this.withAlpha(particle.color, alpha * 0.95);
+      this.ctx.beginPath();
+      this.ctx.roundRect(-particle.size, -particle.size, particle.size * 2.4, particle.size * 1.4, particle.size * 0.6);
+      this.ctx.fill();
+      this.ctx.restore();
+    });
+
     this.ctx.restore();
   }
 
@@ -528,9 +771,8 @@ class SnakeFlow {
     return visualSnake;
   }
 
-  drawAmbientHighlights() {
-    const width = this.canvas.width / this.dpr;
-    const height = this.canvas.height / this.dpr;
+  drawAmbientHighlights(width, height) {
+    const palette = this.themes[this.themeName];
     const glow = this.ctx.createRadialGradient(
       width * 0.18,
       height * 0.12,
@@ -539,7 +781,7 @@ class SnakeFlow {
       height * 0.12,
       width * 0.38
     );
-    glow.addColorStop(0, "rgba(255, 255, 255, 0.22)");
+    glow.addColorStop(0, palette.ambientGlow);
     glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     this.ctx.fillStyle = glow;
     this.ctx.fillRect(0, 0, width, height);
@@ -560,6 +802,10 @@ class SnakeFlow {
     context.arcTo(x, y + height, x, y, radius);
     context.arcTo(x, y, x + width, y, radius);
     context.closePath();
+  }
+
+  withAlpha(rgb, alpha) {
+    return `rgba(${rgb}, ${alpha})`;
   }
 }
 

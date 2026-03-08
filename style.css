@@ -18,24 +18,41 @@
   --surface-blur: blur(28px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page-bg:
-      radial-gradient(circle at top left, rgba(142, 159, 179, 0.18), transparent 24%),
-      radial-gradient(circle at bottom right, rgba(99, 108, 118, 0.16), transparent 32%),
-      linear-gradient(145deg, #1a1d21 0%, #20242a 52%, #262a30 100%);
-    --card-bg: rgba(31, 35, 41, 0.66);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --ink-1: #eef2f5;
-    --ink-2: rgba(238, 242, 245, 0.72);
-    --muted: rgba(238, 242, 245, 0.48);
-    --panel: rgba(255, 255, 255, 0.05);
-    --panel-shadow:
-      20px 20px 48px rgba(8, 10, 12, 0.34),
-      -14px -14px 32px rgba(51, 57, 66, 0.28);
-    --button-bg: linear-gradient(135deg, rgba(130, 151, 168, 0.92), rgba(95, 109, 121, 0.92));
-    --button-shadow: 12px 12px 26px rgba(0, 0, 0, 0.28), -10px -10px 24px rgba(70, 77, 88, 0.24);
-  }
+body[data-theme="night"] {
+  --page-bg:
+    radial-gradient(circle at top left, rgba(127, 143, 164, 0.14), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(93, 101, 116, 0.18), transparent 34%),
+    linear-gradient(145deg, #111317 0%, #161b22 52%, #1d232c 100%);
+  --card-bg: rgba(18, 21, 27, 0.68);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --ink-1: #eef2f6;
+  --ink-2: rgba(238, 242, 246, 0.74);
+  --muted: rgba(238, 242, 246, 0.48);
+  --panel: rgba(255, 255, 255, 0.05);
+  --panel-shadow:
+    20px 20px 48px rgba(6, 8, 11, 0.38),
+    -14px -14px 30px rgba(44, 50, 58, 0.28);
+  --button-bg: linear-gradient(135deg, rgba(106, 125, 141, 0.96), rgba(78, 89, 100, 0.96));
+  --button-shadow: 12px 12px 24px rgba(0, 0, 0, 0.28), -10px -10px 22px rgba(70, 77, 88, 0.18);
+}
+
+body[data-theme="cyber"] {
+  --page-bg:
+    radial-gradient(circle at top left, rgba(0, 255, 231, 0.08), transparent 20%),
+    radial-gradient(circle at bottom right, rgba(255, 69, 157, 0.08), transparent 26%),
+    linear-gradient(145deg, #17191e 0%, #1d2027 50%, #232730 100%);
+  --card-bg: rgba(26, 28, 36, 0.72);
+  --card-border: rgba(109, 255, 241, 0.16);
+  --ink-1: #f3f7fb;
+  --ink-2: rgba(243, 247, 251, 0.76);
+  --muted: rgba(193, 232, 237, 0.54);
+  --panel: rgba(255, 255, 255, 0.05);
+  --panel-shadow:
+    0 0 0 1px rgba(0, 255, 231, 0.08),
+    18px 18px 42px rgba(9, 10, 14, 0.34),
+    -12px -12px 28px rgba(54, 60, 74, 0.24);
+  --button-bg: linear-gradient(135deg, rgba(0, 231, 213, 0.82), rgba(90, 142, 255, 0.78));
+  --button-shadow: 0 0 0 1px rgba(0, 255, 231, 0.12), 0 12px 28px rgba(6, 8, 14, 0.26);
 }
 
 * {
@@ -73,6 +90,19 @@ body::before {
       transparent 18px
     );
   pointer-events: none;
+}
+
+body[data-theme="night"]::before,
+body[data-theme="cyber"]::before {
+  background:
+    linear-gradient(transparent 0%, rgba(255, 255, 255, 0.04) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 18px
+    );
 }
 
 .app-shell {
@@ -182,6 +212,22 @@ body::before {
     0 22px 40px rgba(121, 125, 132, 0.12);
 }
 
+body[data-theme="night"] .canvas-frame {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    linear-gradient(135deg, rgba(74, 82, 95, 0.16), rgba(25, 29, 35, 0.08));
+}
+
+body[data-theme="cyber"] .canvas-frame {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    linear-gradient(135deg, rgba(0, 255, 231, 0.06), rgba(255, 0, 140, 0.03));
+  box-shadow:
+    inset 0 0 0 1px rgba(91, 255, 242, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 24px 42px rgba(11, 14, 22, 0.22);
+}
+
 #game-canvas {
   width: 100%;
   height: 100%;
@@ -202,10 +248,9 @@ body::before {
   -webkit-backdrop-filter: blur(20px);
 }
 
-@media (prefers-color-scheme: dark) {
-  .overlay {
-    background: rgba(15, 18, 22, 0.32);
-  }
+body[data-theme="night"] .overlay,
+body[data-theme="cyber"] .overlay {
+  background: rgba(15, 18, 22, 0.34);
 }
 
 .overlay-visible {
@@ -225,11 +270,10 @@ body::before {
   text-align: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  .overlay-panel {
-    background: rgba(22, 26, 31, 0.5);
-    border-color: rgba(255, 255, 255, 0.08);
-  }
+body[data-theme="night"] .overlay-panel,
+body[data-theme="cyber"] .overlay-panel {
+  background: rgba(22, 26, 31, 0.5);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .overlay-panel h2 {
@@ -245,12 +289,13 @@ body::before {
 }
 
 .primary-button,
-.touch-button {
+.touch-button,
+.theme-chip {
   border: 0;
   font: inherit;
   color: #f8fbff;
   cursor: pointer;
-  transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+  transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .primary-button {
@@ -265,12 +310,14 @@ body::before {
 }
 
 .primary-button:hover,
-.touch-button:hover {
+.touch-button:hover,
+.theme-chip:hover {
   transform: translateY(-1px);
 }
 
 .primary-button:active,
-.touch-button:active {
+.touch-button:active,
+.theme-chip:active {
   transform: translateY(1px) scale(0.985);
 }
 
@@ -280,6 +327,35 @@ body::before {
   justify-content: space-between;
   align-items: end;
   gap: 20px;
+}
+
+.footer-actions {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  justify-items: end;
+}
+
+.theme-switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+
+.theme-chip {
+  min-width: 68px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--ink-1);
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.18), inset -1px -1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.theme-chip.is-active {
+  background: var(--button-bg);
+  color: #f8fbff;
+  box-shadow: var(--button-shadow);
 }
 
 .touch-controls {
@@ -340,6 +416,14 @@ body::before {
   .footer-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .footer-actions {
+    justify-items: stretch;
+  }
+
+  .theme-switch {
+    justify-content: flex-start;
   }
 
   .touch-controls {
