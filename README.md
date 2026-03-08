@@ -6,7 +6,9 @@ A modern, responsive snake game built with HTML5 Canvas, CSS3, and JavaScript. F
 
 ## 🎮 Live Demo
 
-Play the game at: [https://snake.moqi.chat](https://snake.moqi.chat)
+Play the game at: [https://masterMo66.github.io/snake-game](https://masterMo66.github.io/snake-game)
+
+*Custom domain coming soon: `snake.moqi.chat`*
 
 ## ✨ Features
 
