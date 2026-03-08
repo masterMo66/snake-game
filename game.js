@@ -19,13 +19,18 @@ class SnakeFlow {
     this.baseStepDuration = 150;
     this.minStepDuration = 84;
     this.maxStepsPerFrame = 3;
+    this.inputDebounceMs = 42;
     this.cellSize = 24;
     this.boardOffset = { x: 0, y: 0 };
     this.dpr = window.devicePixelRatio || 1;
     this.lastFrameTime = 0;
+    this.lastDirectionInputAt = 0;
+    this.lastMoveSoundAt = 0;
     this.particles = [];
     this.screenShake = 0;
     this.themeName = localStorage.getItem("snake-flow-theme") || "dawn";
+    this.audioContext = null;
+    this.masterGain = null;
 
     this.themes = {
       dawn: {
@@ -109,6 +114,8 @@ class SnakeFlow {
     this.gameOver = false;
     this.lastStepTime = 0;
     this.currentStepDuration = this.baseStepDuration;
+    this.lastDirectionInputAt = 0;
+    this.lastMoveSoundAt = 0;
     this.particles = [];
     this.screenShake = 0;
     this.scoreElement.textContent = "0";
@@ -119,11 +126,20 @@ class SnakeFlow {
   bindEvents() {
     window.addEventListener("resize", () => this.resizeCanvas());
     document.addEventListener("keydown", (event) => this.handleKeydown(event));
-    this.startButton.addEventListener("click", () => this.start());
-    this.restartButton.addEventListener("click", () => this.restart());
+    this.startButton.addEventListener("click", () => {
+      this.ensureAudioReady();
+      this.start();
+    });
+    this.restartButton.addEventListener("click", () => {
+      this.ensureAudioReady();
+      this.restart();
+    });
 
     this.touchButtons.forEach((button) => {
-      const apply = () => this.applyDirection(button.dataset.direction);
+      const apply = () => {
+        this.ensureAudioReady();
+        this.applyDirection(button.dataset.direction);
+      };
       button.addEventListener("click", apply);
       button.addEventListener(
         "touchstart",
@@ -136,7 +152,131 @@ class SnakeFlow {
     });
 
     this.themeButtons.forEach((button) => {
-      button.addEventListener("click", () => this.applyTheme(button.dataset.themeOption));
+      button.addEventListener("click", () => {
+        this.ensureAudioReady();
+        this.applyTheme(button.dataset.themeOption);
+      });
+    });
+  }
+
+  ensureAudioReady() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return;
+    }
+
+    if (!this.audioContext) {
+      this.audioContext = new AudioContextClass();
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.gain.value = 0.32;
+      this.masterGain.connect(this.audioContext.destination);
+    }
+
+    if (this.audioContext.state === "suspended") {
+      this.audioContext.resume().catch(() => {});
+    }
+  }
+
+  playMoveSound() {
+    if (!this.audioContext || !this.masterGain) {
+      return;
+    }
+
+    const now = this.audioContext.currentTime;
+    const oscillator = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(160, now);
+    oscillator.frequency.exponentialRampToValueAtTime(116, now + 0.065);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(280, now);
+    filter.Q.value = 0.8;
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.012, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.1);
+  }
+
+  playEatSound() {
+    if (!this.audioContext || !this.masterGain) {
+      return;
+    }
+
+    const now = this.audioContext.currentTime;
+    const pop = this.audioContext.createOscillator();
+    const sparkle = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+
+    pop.type = "sine";
+    pop.frequency.setValueAtTime(520, now);
+    pop.frequency.exponentialRampToValueAtTime(760, now + 0.04);
+    pop.frequency.exponentialRampToValueAtTime(420, now + 0.18);
+
+    sparkle.type = "triangle";
+    sparkle.frequency.setValueAtTime(980, now);
+    sparkle.frequency.exponentialRampToValueAtTime(1320, now + 0.05);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2400, now);
+    filter.Q.value = 1.3;
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.055, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+    pop.connect(filter);
+    sparkle.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    pop.start(now);
+    sparkle.start(now);
+    pop.stop(now + 0.22);
+    sparkle.stop(now + 0.12);
+  }
+
+  playGameOverSound() {
+    if (!this.audioContext || !this.masterGain) {
+      return;
+    }
+
+    const now = this.audioContext.currentTime;
+    const chord = [196, 246.94, 293.66];
+
+    chord.forEach((frequency, index) => {
+      const oscillator = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      const filter = this.audioContext.createBiquadFilter();
+
+      oscillator.type = index === 0 ? "triangle" : "sine";
+      oscillator.frequency.setValueAtTime(frequency, now);
+      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.72, now + 0.86);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(520, now);
+      filter.Q.value = 0.7;
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.045 / (index + 1), now + 0.05 + index * 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+
+      oscillator.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      oscillator.start(now + index * 0.015);
+      oscillator.stop(now + 1.0);
     });
   }
 
@@ -168,6 +308,8 @@ class SnakeFlow {
   }
 
   handleKeydown(event) {
+    this.ensureAudioReady();
+
     const directionMap = {
       ArrowUp: "up",
       KeyW: "up",
@@ -232,12 +374,17 @@ class SnakeFlow {
       return;
     }
 
-    const activeDirection = this.pendingDirection || this.direction;
-    if (candidate.x === -activeDirection.x && candidate.y === -activeDirection.y) {
+    const now = performance.now();
+    if (this.pendingDirection || (this.running && now - this.lastDirectionInputAt < this.inputDebounceMs)) {
+      return;
+    }
+
+    if (candidate.x === -this.direction.x && candidate.y === -this.direction.y) {
       return;
     }
 
     this.pendingDirection = candidate;
+    this.lastDirectionInputAt = now;
   }
 
   randomFood() {
@@ -292,7 +439,7 @@ class SnakeFlow {
         !this.gameOver &&
         steps < this.maxStepsPerFrame
       ) {
-        this.step();
+        this.step(timestamp);
         this.lastStepTime += this.currentStepDuration;
         elapsed = timestamp - this.lastStepTime;
         steps += 1;
@@ -326,7 +473,7 @@ class SnakeFlow {
     });
   }
 
-  step() {
+  step(timestamp) {
     this.previousSnake = this.snake.map((segment) => ({ ...segment }));
 
     if (this.pendingDirection) {
@@ -359,11 +506,17 @@ class SnakeFlow {
 
     this.snake.unshift(head);
 
+    if (timestamp - this.lastMoveSoundAt > 92) {
+      this.playMoveSound();
+      this.lastMoveSoundAt = timestamp;
+    }
+
     if (willGrow) {
       const burstSource = { ...this.food };
       this.score += 10;
       this.scoreElement.textContent = String(this.score);
       this.finalScoreElement.textContent = String(this.score);
+      this.playEatSound();
       this.spawnFoodBurst(burstSource);
       this.screenShake = Math.max(this.screenShake, this.cellSize * 0.08);
       this.food = this.randomFood();
@@ -405,6 +558,7 @@ class SnakeFlow {
     this.gameOver = true;
     this.statusElement.textContent = "Crashed";
     this.finalScoreElement.textContent = String(this.score);
+    this.playGameOverSound();
     this.gameOverOverlay.classList.add("overlay-visible");
 
     if (this.score > this.bestScore) {
@@ -508,7 +662,14 @@ class SnakeFlow {
     if (this.themeName === "cyber") {
       this.ctx.strokeStyle = "rgba(113, 255, 242, 0.06)";
       this.ctx.lineWidth = 1;
-      this.roundRect(this.ctx, this.cellSize * 0.2, this.cellSize * 0.2, width - this.cellSize * 0.4, height - this.cellSize * 0.4, this.cellSize * 0.72);
+      this.roundRect(
+        this.ctx,
+        this.cellSize * 0.2,
+        this.cellSize * 0.2,
+        width - this.cellSize * 0.4,
+        height - this.cellSize * 0.4,
+        this.cellSize * 0.72
+      );
       this.ctx.stroke();
     }
 
